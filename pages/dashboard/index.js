@@ -4,6 +4,7 @@ import { css } from "@emotion/react";
 import { Grid, Container } from "@mui/material";
 
 import EventFetchingSetting from "../../components/EventFetchingSettings";
+import AdminsManagement from "../../components/AdminsManagement";
 
 const Dashboard = () => {
   return (
@@ -17,6 +18,12 @@ const Dashboard = () => {
       >
         <Grid item md={6}>
           <EventFetchingSetting />
+          <div
+            css={css`
+              margin-top: 2em;
+            `}
+          ></div>
+          <AdminsManagement />
         </Grid>
       </Grid>
     </Container>
