@@ -5,6 +5,7 @@ import { Grid, Container } from "@mui/material";
 
 import EventFetchingSetting from "../../components/EventFetchingSettings";
 import AdminsManagement from "../../components/AdminsManagement";
+import NotificationSettings from "../../components/NotificationSettings";
 
 const Dashboard = () => {
   return (
@@ -17,6 +18,12 @@ const Dashboard = () => {
         `}
       >
         <Grid item md={6}>
+          <NotificationSettings />
+          <div
+            css={css`
+              margin-top: 2em;
+            `}
+          ></div>
           <EventFetchingSetting />
           <div
             css={css`

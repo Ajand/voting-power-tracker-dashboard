@@ -68,8 +68,21 @@ const EventFetchingSetting = () => {
           justify-content: space-between;
         `}
       >
-        <Typography variant="body1 ">
-          Status: {StatusRenderer(currentStatus)}
+        <Typography
+          variant="body1"
+          css={css`
+            display: flex;
+            align-items: center;
+          `}
+        >
+          <span
+            css={css`
+              margin-right: 0.5em;
+            `}
+          >
+            Status:
+          </span>{" "}
+          {StatusRenderer(currentStatus)}
         </Typography>
         {ActionButtonRenderer(currentStatus)}
       </div>
