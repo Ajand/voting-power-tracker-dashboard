@@ -2,12 +2,23 @@
 /** @jsxImportSource @emotion/react */
 import { css } from "@emotion/react";
 import { Grid, Container } from "@mui/material";
+import { useRouter } from "next/router";
+import { useEffect } from "react";
 
 import EventFetchingSetting from "../../components/EventFetchingSettings";
 import AdminsManagement from "../../components/AdminsManagement";
 import NotificationSettings from "../../components/NotificationSettings";
 
 const Dashboard = () => {
+  const router = useRouter();
+
+  useEffect(() => {
+    const token = localStorage.getItem("voting-power-tracker-token");
+    if (!token) {
+      router.push("/");
+    }
+  }, []);
+
   return (
     <Container>
       <Grid
