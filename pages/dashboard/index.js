@@ -5,12 +5,26 @@ import { Grid, Container } from "@mui/material";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
 
+import { gql, useMutation, useQuery } from "@apollo/client";
+
+const ME = gql`
+  query me {
+    me {
+      _id
+      address
+      superAdmin
+    }
+  }
+`;
+
 import EventFetchingSetting from "../../components/EventFetchingSettings";
 import AdminsManagement from "../../components/AdminsManagement";
 import NotificationSettings from "../../components/NotificationSettings";
 
 const Dashboard = () => {
   const router = useRouter();
+
+  const { loading, error, data, refetch } = useQuery(ME);
 
   useEffect(() => {
     const token = localStorage.getItem("voting-power-tracker-token");
@@ -21,15 +35,19 @@ const Dashboard = () => {
 
   return (
     <Container>
-      <Grid
-        container
-        spacing={2}
-        css={css`
-          padding-top: 2em;
-        `}
-      >
-        <Grid item md={6}>
-          <NotificationSettings />
+      {loading ? (
+        <div>Loading ...</div>
+      ) : (
+        <>
+          <Grid
+            container
+            spacing={2}
+            css={css`
+              padding-top: 2em;
+            `}
+          >
+            <Grid item md={6}>
+              {/*<NotificationSettings />
           <div
             css={css`
               margin-top: 2em;
@@ -40,10 +58,12 @@ const Dashboard = () => {
             css={css`
               margin-top: 2em;
             `}
-          ></div>
-          <AdminsManagement />
-        </Grid>
-      </Grid>
+  ></div> */}
+              <AdminsManagement me={data.me} />
+            </Grid>
+          </Grid>
+        </>
+      )}
     </Container>
   );
 };
