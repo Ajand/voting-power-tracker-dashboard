@@ -59,6 +59,12 @@ const Dashboard = () => {
               margin-top: 2em;
             `}
   ></div> */}
+              <EventFetchingSetting />
+              <div
+                css={css`
+                  margin-top: 2em;
+                `}
+              ></div>
               <AdminsManagement me={data.me} />
             </Grid>
           </Grid>

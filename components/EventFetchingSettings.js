@@ -2,8 +2,72 @@
 /** @jsxImportSource @emotion/react */
 import { css } from "@emotion/react";
 import { Paper, Typography, Chip, TextField, Button } from "@mui/material";
+import { gql, useMutation, useQuery } from "@apollo/client";
+import { useState, useEffect } from "react";
+import { ethers } from "ethers";
+
+const FETCHER = gql`
+  {
+    fetcher {
+      status
+      tokenAddress
+      tokenCreationBlock
+      lastFetchedBlock
+    }
+  }
+`;
+
+const START_FETCHING = gql`
+  mutation StartFetching($tokenAddress: String!, $tokenCreationBlock: String!) {
+    startFetching(
+      tokenAddress: $tokenAddress
+      tokenCreationBlock: $tokenCreationBlock
+    )
+  }
+`;
+
+const PAUSE_FETCHING = gql`
+  mutation Mutation {
+    pauseFetching
+  }
+`;
+
+const RESUME_FETCHING = gql`
+  mutation Mutation {
+    resumeFetching
+  }
+`;
+
+const RESET_FETCHING = gql`
+  mutation Mutation {
+    resetFetching
+  }
+`;
 
 const EventFetchingSetting = () => {
+  const [tokenAddress, setTokenAddress] = useState("");
+  const [tokenCreationBlock, setTokenCreationBlock] = useState("");
+
+  const { loading, error, data, refetch, startPolling, stopPolling } =
+    useQuery(FETCHER);
+
+  const [startFetching] = useMutation(START_FETCHING);
+  const [pauseFetching] = useMutation(PAUSE_FETCHING);
+  const [resumeFetching] = useMutation(RESUME_FETCHING);
+  const [resetFetching] = useMutation(RESET_FETCHING);
+
+  useEffect(() => {
+    if (data && data.fetcher) {
+      setTokenAddress(data.fetcher.tokenAddress);
+      setTokenCreationBlock(data.fetcher.tokenCreationBlock);
+    }
+  }, [data]);
+
+  useEffect(() => {
+    startPolling(1000);
+    return () => stopPolling();
+  }, []);
+
   const StatusRenderer = (sts) => {
     switch (sts) {
       case 0:
@@ -20,7 +84,26 @@ const EventFetchingSetting = () => {
       case 0:
         return (
           <>
-            <Button size="small" variant="contained" color="primary">
+            <Button
+              onClick={() => {
+                startFetching({
+                  variables: {
+                    tokenAddress,
+                    tokenCreationBlock: String(tokenCreationBlock),
+                  },
+                })
+                  .then((r) => {
+                    refetch();
+                  })
+                  .catch((err) => {
+                    console.log(err);
+                  });
+              }}
+              disabled={!ethers.utils.isAddress(tokenAddress)}
+              size="small"
+              variant="contained"
+              color="primary"
+            >
               Start
             </Button>
           </>
@@ -28,7 +111,20 @@ const EventFetchingSetting = () => {
       case 1:
         return (
           <>
-            <Button size="small" variant="outlined" color="primary">
+            <Button
+              onClick={() => {
+                pauseFetching()
+                  .then((r) => {
+                    refetch();
+                  })
+                  .catch((err) => {
+                    console.log(err);
+                  });
+              }}
+              size="small"
+              variant="outlined"
+              color="primary"
+            >
               Pause
             </Button>
           </>
@@ -37,6 +133,15 @@ const EventFetchingSetting = () => {
         return (
           <div>
             <Button
+              onClick={() => {
+                resumeFetching()
+                  .then((r) => {
+                    refetch();
+                  })
+                  .catch((err) => {
+                    console.log(err);
+                  });
+              }}
               css={css`
                 margin-right: 0.5em;
               `}
@@ -44,9 +149,22 @@ const EventFetchingSetting = () => {
               variant="contained"
               color="secondary"
             >
-              Start
+              Resume
             </Button>
-            <Button size="small" variant="text" color="error">
+            <Button
+              onClick={() => {
+                resetFetching()
+                  .then((r) => {
+                    refetch();
+                  })
+                  .catch((err) => {
+                    console.log(err);
+                  });
+              }}
+              size="small"
+              variant="text"
+              color="error"
+            >
               Reset
             </Button>
           </div>
@@ -54,7 +172,7 @@ const EventFetchingSetting = () => {
     }
   };
 
-  const currentStatus = 1;
+  if (loading && !data) return <div></div>;
 
   return (
     <Paper
@@ -68,26 +186,34 @@ const EventFetchingSetting = () => {
           justify-content: space-between;
         `}
       >
-        <Typography
-          variant="body1"
+        <div
           css={css`
             display: flex;
             align-items: center;
           `}
         >
-          <span
+          <Typography
+            variant="body1"
             css={css`
-              margin-right: 0.5em;
+              display: flex;
+              align-items: center;
             `}
           >
-            Status:
-          </span>{" "}
-          {StatusRenderer(currentStatus)}
-        </Typography>
-        {ActionButtonRenderer(currentStatus)}
+            <span
+              css={css`
+                margin-right: 0.5em;
+              `}
+            >
+              Status:
+            </span>{" "}
+          </Typography>
+          {StatusRenderer(data.fetcher.status)}
+        </div>
+
+        {ActionButtonRenderer(data.fetcher.status)}
       </div>
       <div>
-        {currentStatus === 1 ? (
+        {data.fetcher.status !== 0 ? (
           <>
             <div>
               <Typography
@@ -96,7 +222,7 @@ const EventFetchingSetting = () => {
                 `}
                 variant="body1"
               >
-                Token Address: 0xas123we123123
+                Token Address: {data.fetcher.tokenAddress}
               </Typography>
               <Typography
                 css={css`
@@ -104,7 +230,7 @@ const EventFetchingSetting = () => {
                 `}
                 variant="body1"
               >
-                Token Creation Block: 1230000
+                Token Creation Block: {data.fetcher.tokenCreationBlock}
               </Typography>
             </div>
           </>
@@ -118,6 +244,14 @@ const EventFetchingSetting = () => {
               css={css`
                 margin-top: 1em;
               `}
+              value={tokenAddress}
+              onChange={(e) => setTokenAddress(e.target.value)}
+              error={!!tokenAddress && !ethers.utils.isAddress(tokenAddress)}
+              helperText={
+                tokenAddress &&
+                !ethers.utils.isAddress(tokenAddress) &&
+                "Must be an ethereum address"
+              }
             />
             <TextField
               variant="outlined"
@@ -127,28 +261,25 @@ const EventFetchingSetting = () => {
               css={css`
                 margin-top: 0.75em;
               `}
+              type="number"
+              value={tokenCreationBlock}
+              onChange={(e) => setTokenCreationBlock(e.target.value)}
             />
           </>
         )}
       </div>
-      <div>
-        <Typography
-          css={css`
-            margin-top: 1em;
-          `}
-          variant="body1"
-        >
-          Last Fetched Block: 1230000
-        </Typography>
-        <Typography
-          css={css`
-            margin-top: 0.5em;
-          `}
-          variant="body1"
-        >
-          Last Processed Block: 1230000
-        </Typography>
-      </div>
+      {data.fetcher.status > 0 && (
+        <div>
+          <Typography
+            css={css`
+              margin-top: 0.5em;
+            `}
+            variant="body1"
+          >
+            Last Fetched Block: {data.fetcher.lastFetchedBlock}
+          </Typography>
+        </div>
+      )}
     </Paper>
   );
 };
