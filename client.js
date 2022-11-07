@@ -1,7 +1,14 @@
-import { ApolloClient, ApolloLink, InMemoryCache, split } from "@apollo/client";
+import {
+  ApolloClient,
+  ApolloLink,
+  InMemoryCache,
+  split,
+  HttpLink,
+} from "@apollo/client";
 import { setContext } from "@apollo/client/link/context";
 import { createUploadLink } from "apollo-upload-client";
 import { onError } from "apollo-link-error";
+//import { ApolloLink } from "apollo-link";
 
 const GRAPHQL_SERVER =
   process.env.REACT_APP_HTTP_GRAPHQL_URL || "http://localhost:4000";
@@ -17,6 +24,11 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
 
 const httpLink = createUploadLink({
   uri: GRAPHQL_SERVER,
+});
+
+const thegraphLink = new HttpLink({
+  uri: "https://api.thegraph.com/subgraphs/name/ajand/reflexer_flx",
+  // other link options...
 });
 
 const authLink = setContext((_, { headers }) => {
@@ -38,8 +50,14 @@ const authLink = setContext((_, { headers }) => {
 });
 
 const client = new ApolloClient({
-  link: authLink.concat(ApolloLink.from([errorLink, httpLink])),
-
+  link: split(
+    (operation) => operation.getContext().clientName === "third-graph",
+    // the string "third-party" can be anything you want,
+    // we will use it in a bit
+    thegraphLink, // <= apollo will send to this if clientName is "third-party"
+    authLink.concat(ApolloLink.from([errorLink, httpLink]))
+    // <= otherwise will send to this
+  ),
   cache: new InMemoryCache(),
 });
 

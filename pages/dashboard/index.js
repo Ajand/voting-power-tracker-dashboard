@@ -19,6 +19,8 @@ const ME = gql`
 
 import EventFetchingSetting from "../../components/EventFetchingSettings";
 import AdminsManagement from "../../components/AdminsManagement";
+import EventsTable from "../../components/EventsTable";
+import ProcessingSettings from "../../components/ProcessingSettings";
 import NotificationSettings from "../../components/NotificationSettings";
 
 const Dashboard = () => {
@@ -46,7 +48,7 @@ const Dashboard = () => {
               padding-top: 2em;
             `}
           >
-            <Grid item md={6}>
+            <Grid item md={5}>
               {/*<NotificationSettings />
           <div
             css={css`
@@ -59,13 +61,30 @@ const Dashboard = () => {
               margin-top: 2em;
             `}
   ></div> */}
+              <NotificationSettings />
+              <div
+                css={css`
+                  margin-top: 2em;
+                `}
+              ></div>
               <EventFetchingSetting />
+
+              <div
+                css={css`
+                  margin-top: 2em;
+                `}
+              ></div>
+              <ProcessingSettings />
+
               <div
                 css={css`
                   margin-top: 2em;
                 `}
               ></div>
               <AdminsManagement me={data.me} />
+            </Grid>
+            <Grid item md={7}>
+              <EventsTable />
             </Grid>
           </Grid>
         </>

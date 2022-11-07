@@ -17,41 +17,44 @@ import {
   Checkbox,
 } from "@mui/material";
 import { useState, useEffect } from "react";
+import { gql, useMutation, useQuery } from "@apollo/client";
+import { ethers } from "ethers";
+
+const PROCESSOR = gql`
+  {
+    processor {
+      status
+      processed
+      fetched
+      lastProcessedBlock
+      alertSettings
+      processFrom
+    }
+  }
+`;
+
+const RESET_PROCESSING = gql`
+  mutation Mutation {
+    resetProcessing
+  }
+`;
 
 const NotificationSettings = () => {
   const [manualCursor, setManualCurosr] = useState(false);
   const [notifSetting, setNotifSetting] = useState(null);
 
+  const [resetProcessing] = useMutation(RESET_PROCESSING);
+
+  const { loading, error, data, refetch, startPolling, stopPolling } =
+    useQuery(PROCESSOR);
+
+  console.log(data);
+
   useEffect(() => {
-    setNotifSetting({
-      delegateRelative: {
-        active: true,
-        percent: 1,
-        message:
-          "Voting power of $delegatee$ increased $percent$ in $time$ hours",
-        timeframe: 24,
-      },
-      delegateAmount: {
-        active: true,
-        amount: 10000000,
-        message:
-          "Voting power of $delegatee$ increased $amount$ in $time$ hours",
-        timeframe: 24,
-      },
-      transferRelative: {
-        active: true,
-        percent: 1.5,
-        message: "$percent$% of tokens transfered to $to$ in $time$ hours",
-        timeframe: 24,
-      },
-      transferAmount: {
-        active: true,
-        amount: 20000000,
-        message: "$amount$ tokens transfered from $from$ to $to$",
-        timeframe: 24,
-      },
-    });
-  }, []);
+    if (data && data.processor.alertSettings) {
+      setNotifSetting(JSON.parse(data.processor.alertSettings));
+    }
+  }, [data]);
 
   const changeNotifSetting = (variant, key) => (value) => {
     const nNotifS = { ...notifSetting };
@@ -83,8 +86,21 @@ const NotificationSettings = () => {
       case 1:
         return (
           <>
-            <Button size="small" variant="outlined" color="primary">
-              Pause
+            <Button
+              onClick={() =>
+                resetProcessing()
+                  .then((r) => {
+                    refetch();
+                  })
+                  .catch((err) => {
+                    console.log(err);
+                  })
+              }
+              size="small"
+              variant="outlined"
+              color="error"
+            >
+              Stop
             </Button>
           </>
         );
@@ -118,7 +134,10 @@ const NotificationSettings = () => {
           `}
           variant="body1"
         >
-          Token Creation Block: 1230000
+          Alerting From:{" "}
+          {data.processor.processFrom
+            ? data.processor.processFrom
+            : "Current Block"}
         </Typography>
       );
 
@@ -162,9 +181,9 @@ const NotificationSettings = () => {
     );
   };
 
-  const currentStatus = 1;
+  if (!data || !notifSetting) return <div></div>;
 
-  if (!notifSetting) return <div></div>;
+  const currentStatus = data.processor.status;
 
   return (
     <Paper
@@ -197,214 +216,449 @@ const NotificationSettings = () => {
         {ActionButtonRenderer(currentStatus)}
       </div>
       {ProcessingCursor(currentStatus)}
-      <div>
-        <FormControlLabel
-          onChange={() =>
-            changeNotifSetting(
-              "delegateRelative",
-              "active"
-            )(!notifSetting.delegateRelative.active)
-          }
-          control={<Checkbox checked={notifSetting.delegateRelative.active} />}
-          label={"Delegation Relative To Total Tokens"}
-        />
-        {notifSetting.delegateRelative.active && (
+      {currentStatus == 0 ? (
+        <>
+          {" "}
+          <div>
+            <FormControlLabel
+              onChange={() =>
+                changeNotifSetting(
+                  "delegateRelative",
+                  "active"
+                )(!notifSetting.delegateRelative.active)
+              }
+              control={
+                <Checkbox checked={notifSetting.delegateRelative.active} />
+              }
+              label={"Delegation Relative To Total Tokens"}
+            />
+            {notifSetting.delegateRelative.active && (
+              <div
+                css={css`
+                  margin-top: 0.5em;
+                `}
+              >
+                <TextField
+                  variant="outlined"
+                  label="Percentage (%)"
+                  size="small"
+                  fullWidth
+                  value={notifSetting.delegateRelative.percent}
+                  css={css`
+                    margin-bottom: 0.75em;
+                  `}
+                />
+                <TextField
+                  variant="outlined"
+                  label="Message"
+                  size="small"
+                  fullWidth
+                  value={notifSetting.delegateRelative.message}
+                  multiline
+                  helperText="use $delegatee$, $percent$ and $time$ placeholders"
+                  css={css`
+                    margin-bottom: 0.75em;
+                  `}
+                />
+                <TextField
+                  variant="outlined"
+                  label="Timeframe (hour)"
+                  size="small"
+                  fullWidth
+                  value={notifSetting.delegateRelative.timeframe}
+                  css={css`
+                    margin-bottom: 0.75em;
+                  `}
+                />
+              </div>
+            )}
+          </div>
+          <div>
+            <FormControlLabel
+              onChange={() =>
+                changeNotifSetting(
+                  "delegateAmount",
+                  "active"
+                )(!notifSetting.delegateAmount.active)
+              }
+              control={
+                <Checkbox checked={notifSetting.delegateAmount.active} />
+              }
+              label={"Delegation Absolute Change"}
+            />
+            {notifSetting.delegateAmount.active && (
+              <div
+                css={css`
+                  margin-top: 0.5em;
+                `}
+              >
+                <TextField
+                  variant="outlined"
+                  label="Amount"
+                  size="small"
+                  fullWidth
+                  value={notifSetting.delegateAmount.amount}
+                  css={css`
+                    margin-bottom: 0.75em;
+                  `}
+                />
+                <TextField
+                  variant="outlined"
+                  label="Message"
+                  size="small"
+                  fullWidth
+                  value={notifSetting.delegateAmount.message}
+                  multiline
+                  helperText="use $delegatee$, $amount$ and $time$ placeholders"
+                  css={css`
+                    margin-bottom: 0.75em;
+                  `}
+                />
+                <TextField
+                  variant="outlined"
+                  label="Timeframe (hour)"
+                  size="small"
+                  fullWidth
+                  value={notifSetting.delegateAmount.timeframe}
+                  css={css`
+                    margin-bottom: 0.75em;
+                  `}
+                />
+              </div>
+            )}
+          </div>
+          <div>
+            <FormControlLabel
+              onChange={() =>
+                changeNotifSetting(
+                  "transferRelative",
+                  "active"
+                )(!notifSetting.transferRelative.active)
+              }
+              control={
+                <Checkbox checked={notifSetting.transferRelative.active} />
+              }
+              label={"Transfer Relative To Total Tokens"}
+            />
+            {notifSetting.transferRelative.active && (
+              <div
+                css={css`
+                  margin-top: 0.5em;
+                `}
+              >
+                <TextField
+                  variant="outlined"
+                  label="Percentage (%)"
+                  size="small"
+                  fullWidth
+                  value={notifSetting.transferRelative.percent}
+                  css={css`
+                    margin-bottom: 0.75em;
+                  `}
+                />
+                <TextField
+                  variant="outlined"
+                  label="Message"
+                  size="small"
+                  fullWidth
+                  value={notifSetting.transferRelative.message}
+                  multiline
+                  helperText="use $percent$, $to$ and $time$ placeholders"
+                  css={css`
+                    margin-bottom: 0.75em;
+                  `}
+                />
+                <TextField
+                  variant="outlined"
+                  label="Timeframe (hour)"
+                  size="small"
+                  fullWidth
+                  value={notifSetting.transferRelative.timeframe}
+                  css={css`
+                    margin-bottom: 0.75em;
+                  `}
+                />
+              </div>
+            )}
+          </div>
+          <div>
+            <FormControlLabel
+              onChange={() =>
+                changeNotifSetting(
+                  "transferAmount",
+                  "active"
+                )(!notifSetting.transferAmount.active)
+              }
+              control={
+                <Checkbox checked={notifSetting.transferAmount.active} />
+              }
+              label={"Transfer Absolute Change"}
+            />
+            {notifSetting.transferAmount.active && (
+              <div
+                css={css`
+                  margin-top: 0.5em;
+                `}
+              >
+                <TextField
+                  variant="outlined"
+                  label="Amount"
+                  size="small"
+                  fullWidth
+                  value={notifSetting.transferAmount.amount}
+                  css={css`
+                    margin-bottom: 0.75em;
+                  `}
+                />
+                <TextField
+                  variant="outlined"
+                  label="Message"
+                  size="small"
+                  fullWidth
+                  value={notifSetting.transferAmount.message}
+                  multiline
+                  helperText="use $amount$, $to$ and $time$ placeholders"
+                  css={css`
+                    margin-bottom: 0.75em;
+                  `}
+                />
+                <TextField
+                  variant="outlined"
+                  label="Timeframe (hour)"
+                  size="small"
+                  fullWidth
+                  value={notifSetting.transferAmount.timeframe}
+                  css={css`
+                    margin-bottom: 0.75em;
+                  `}
+                />
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
           <div
             css={css`
-              margin-top: 0.5em;
+              margin-top: 1em;
+              margin-bottom: 0.75em;
             `}
           >
-            <TextField
-              variant="outlined"
-              label="Percentage (%)"
-              size="small"
-              fullWidth
-              value={notifSetting.delegateRelative.percent}
+            <div
               css={css`
-                margin-bottom: 0.75em;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
               `}
-            />
-            <TextField
-              variant="outlined"
-              label="Message"
-              size="small"
-              fullWidth
-              value={notifSetting.delegateRelative.message}
-              multiline
-              helperText="use $delegatee$, $percent$ and $time$ placeholders"
-              css={css`
-                margin-bottom: 0.75em;
-              `}
-            />
-            <TextField
-              variant="outlined"
-              label="Timeframe (hour)"
-              size="small"
-              fullWidth
-              value={notifSetting.delegateRelative.timeframe}
-              css={css`
-                margin-bottom: 0.75em;
-              `}
-            />
+            >
+              <Typography variant="body1">Relative Delegation</Typography>
+              <Chip
+                size="small"
+                variant={
+                  notifSetting.delegateRelative.active
+                    ? "contained"
+                    : "outlined"
+                }
+                label={
+                  notifSetting.delegateRelative.active ? "active" : "deactive"
+                }
+              />
+            </div>
+            {notifSetting.delegateRelative.active && (
+              <>
+                <Typography
+                  variant="body1"
+                  css={css`
+                    margin-top: 0.5em;
+                  `}
+                >
+                  Threshold Percent: {notifSetting.delegateRelative.percent}%
+                </Typography>
+                <Typography
+                  variant="body1"
+                  css={css`
+                    margin-top: 0.5em;
+                  `}
+                >
+                  Message: {notifSetting.delegateRelative.message}
+                </Typography>
+                <Typography
+                  variant="body1"
+                  css={css`
+                    margin-top: 0.5em;
+                  `}
+                >
+                  Timeframe: {notifSetting.delegateRelative.timeframe}h
+                </Typography>
+              </>
+            )}
           </div>
-        )}
-      </div>
-      <div>
-        <FormControlLabel
-          onChange={() =>
-            changeNotifSetting(
-              "delegateAmount",
-              "active"
-            )(!notifSetting.delegateAmount.active)
-          }
-          control={<Checkbox checked={notifSetting.delegateAmount.active} />}
-          label={"Delegation Absolute Change"}
-        />
-        {notifSetting.delegateAmount.active && (
+          <Divider />
           <div
             css={css`
-              margin-top: 0.5em;
+              margin-top: 1em;
+              margin-bottom: 0.75em;
             `}
           >
-            <TextField
-              variant="outlined"
-              label="Amount"
-              size="small"
-              fullWidth
-              value={notifSetting.delegateAmount.amount}
+            <div
               css={css`
-                margin-bottom: 0.75em;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
               `}
-            />
-            <TextField
-              variant="outlined"
-              label="Message"
-              size="small"
-              fullWidth
-              value={notifSetting.delegateAmount.message}
-              multiline
-              helperText="use $delegatee$, $amount$ and $time$ placeholders"
-              css={css`
-                margin-bottom: 0.75em;
-              `}
-            />
-            <TextField
-              variant="outlined"
-              label="Timeframe (hour)"
-              size="small"
-              fullWidth
-              value={notifSetting.delegateAmount.timeframe}
-              css={css`
-                margin-bottom: 0.75em;
-              `}
-            />
+            >
+              <Typography variant="body1">Absolute Delegation</Typography>
+              <Chip
+                size="small"
+                variant={
+                  notifSetting.delegateAmount.active ? "contained" : "outlined"
+                }
+                label={
+                  notifSetting.delegateAmount.active ? "active" : "deactive"
+                }
+              />
+            </div>
+            {notifSetting.delegateAmount.active && (
+              <>
+                <Typography
+                  variant="body1"
+                  css={css`
+                    margin-top: 0.5em;
+                  `}
+                >
+                  Threshold Amount: {notifSetting.delegateAmount.amount}
+                </Typography>
+                <Typography
+                  variant="body1"
+                  css={css`
+                    margin-top: 0.5em;
+                  `}
+                >
+                  Message: {notifSetting.delegateAmount.message}
+                </Typography>
+                <Typography
+                  variant="body1"
+                  css={css`
+                    margin-top: 0.5em;
+                  `}
+                >
+                  Timeframe: {notifSetting.delegateAmount.timeframe}h
+                </Typography>
+              </>
+            )}
           </div>
-        )}
-      </div>
-      <div>
-        <FormControlLabel
-          onChange={() =>
-            changeNotifSetting(
-              "transferRelative",
-              "active"
-            )(!notifSetting.transferRelative.active)
-          }
-          control={<Checkbox checked={notifSetting.transferRelative.active} />}
-          label={"Transfer Relative To Total Tokens"}
-        />
-        {notifSetting.transferRelative.active && (
+          <Divider />
           <div
             css={css`
-              margin-top: 0.5em;
+              margin-top: 1em;
+              margin-bottom: 0.75em;
             `}
           >
-            <TextField
-              variant="outlined"
-              label="Percentage (%)"
-              size="small"
-              fullWidth
-              value={notifSetting.transferRelative.percent}
+            <div
               css={css`
-                margin-bottom: 0.75em;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
               `}
-            />
-            <TextField
-              variant="outlined"
-              label="Message"
-              size="small"
-              fullWidth
-              value={notifSetting.transferRelative.message}
-              multiline
-              helperText="use $percent$, $to$ and $time$ placeholders"
-              css={css`
-                margin-bottom: 0.75em;
-              `}
-            />
-            <TextField
-              variant="outlined"
-              label="Timeframe (hour)"
-              size="small"
-              fullWidth
-              value={notifSetting.transferRelative.timeframe}
-              css={css`
-                margin-bottom: 0.75em;
-              `}
-            />
+            >
+              <Typography variant="body1">Relative Transfer</Typography>
+              <Chip
+                size="small"
+                variant={
+                  notifSetting.transferRelative.active
+                    ? "contained"
+                    : "outlined"
+                }
+                label={
+                  notifSetting.transferRelative.active ? "active" : "deactive"
+                }
+              />
+            </div>
+            {notifSetting.transferRelative.active && (
+              <>
+                <Typography
+                  variant="body1"
+                  css={css`
+                    margin-top: 0.5em;
+                  `}
+                >
+                  Threshold Percent: {notifSetting.transferRelative.percent}%
+                </Typography>
+                <Typography
+                  variant="body1"
+                  css={css`
+                    margin-top: 0.5em;
+                  `}
+                >
+                  Message: {notifSetting.transferRelative.message}
+                </Typography>
+                <Typography
+                  variant="body1"
+                  css={css`
+                    margin-top: 0.5em;
+                  `}
+                >
+                  Timeframe: {notifSetting.transferRelative.timeframe}h
+                </Typography>
+              </>
+            )}
           </div>
-        )}
-      </div>
-      <div>
-        <FormControlLabel
-          onChange={() =>
-            changeNotifSetting(
-              "transferAmount",
-              "active"
-            )(!notifSetting.transferAmount.active)
-          }
-          control={<Checkbox checked={notifSetting.transferAmount.active} />}
-          label={"Transfer Absolute Change"}
-        />
-        {notifSetting.transferAmount.active && (
+          <Divider />
           <div
             css={css`
-              margin-top: 0.5em;
+              margin-top: 1em;
+              margin-bottom: 0.75em;
             `}
           >
-            <TextField
-              variant="outlined"
-              label="Amount"
-              size="small"
-              fullWidth
-              value={notifSetting.transferAmount.amount}
+            <div
               css={css`
-                margin-bottom: 0.75em;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
               `}
-            />
-            <TextField
-              variant="outlined"
-              label="Message"
-              size="small"
-              fullWidth
-              value={notifSetting.transferAmount.message}
-              multiline
-              helperText="use $amount$, $to$ and $time$ placeholders"
-              css={css`
-                margin-bottom: 0.75em;
-              `}
-            />
-            <TextField
-              variant="outlined"
-              label="Timeframe (hour)"
-              size="small"
-              fullWidth
-              value={notifSetting.transferAmount.timeframe}
-              css={css`
-                margin-bottom: 0.75em;
-              `}
-            />
+            >
+              <Typography variant="body1">Absolute Transfer</Typography>
+              <Chip
+                size="small"
+                variant={
+                  notifSetting.transferAmount.active ? "contained" : "outlined"
+                }
+                label={
+                  notifSetting.transferAmount.active ? "active" : "deactive"
+                }
+              />
+            </div>
+            {notifSetting.transferAmount.active && (
+              <>
+                <Typography
+                  variant="body1"
+                  css={css`
+                    margin-top: 0.5em;
+                  `}
+                >
+                  Threshold Percent: {notifSetting.transferAmount.amount}
+                </Typography>
+                <Typography
+                  variant="body1"
+                  css={css`
+                    margin-top: 0.5em;
+                  `}
+                >
+                  Message: {notifSetting.transferAmount.message}
+                </Typography>
+                <Typography
+                  variant="body1"
+                  css={css`
+                    margin-top: 0.5em;
+                  `}
+                >
+                  Timeframe: {notifSetting.transferAmount.timeframe}h
+                </Typography>
+              </>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
     </Paper>
   );
 };
