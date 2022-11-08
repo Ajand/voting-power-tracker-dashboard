@@ -35,6 +35,41 @@ const EVENTS = gql`
   }
 `;
 
+const USERS = gql`
+  query Users($limit: Int!, $offset: Int!, $orderBy: String!) {
+    users(
+      first: $limit
+      skip: $offset
+      orderBy: $orderBy
+      orderDirection: "desc"
+    ) {
+      id
+      balance
+      votingPower
+      balanceHistory {
+        id
+        amount
+        block {
+          id
+          number
+          at
+          totalSupply
+        }
+      }
+      votingPowerHistory {
+        id
+        amount
+        block {
+          id
+          number
+          at
+          totalSupply
+        }
+      }
+    }
+  }
+`;
+
 function TablePaginationActions(props) {
   const theme = useTheme();
   const { count, page, rowsPerPage, onPageChange } = props;
@@ -111,16 +146,19 @@ function createData(name, calories, fat) {
 export default function CustomPaginationActionsTable() {
   const [limit, setLimit] = useState(10);
   const [offset, setOffset] = useState(0);
+  const [orderBy, setOrderBy] = useState("votingPower");
 
-  const { data, loading, error, startPolling, stopPolling } = useQuery(EVENTS, {
+  const { data, loading, error, startPolling, stopPolling } = useQuery(USERS, {
     variables: {
       limit,
       offset,
+      orderBy,
     },
+    context: { clientName: "third-graph" },
   });
 
   useEffect(() => {
-    startPolling(5000);
+    startPolling(13 * 1000);
     return () => stopPolling();
   }, []);
 
@@ -129,11 +167,10 @@ export default function CustomPaginationActionsTable() {
   };
 
   const handleChangeRowsPerPage = (event) => {
+    console.log(event.target.value);
     setLimit(parseInt(event.target.value, 10));
     setOffset(0);
   };
-
-  if (!data) return <></>;
 
   return (
     <TableContainer component={Paper}>
@@ -141,55 +178,75 @@ export default function CustomPaginationActionsTable() {
         <TableHead>
           <TableRow>
             <TableCell component="th" scope="row" align="center">
-              BlockNumber
+              Address
             </TableCell>
-            <TableCell component="th" scope="row" align="center">
-              Event Type
+            <TableCell
+              css={css`
+                cursor: pointer;
+              `}
+              onClick={() => setOrderBy("balance")}
+              component="th"
+              scope="row"
+              align="center"
+            >
+              Balance
             </TableCell>
-            <TableCell component="th" scope="row" align="center">
-              Transaction
-            </TableCell>
-            <TableCell component="th" scope="row" align="center">
-              Status
+            <TableCell
+              css={css`
+                cursor: pointer;
+              `}
+              onClick={() => setOrderBy("votingPower")}
+              component="th"
+              scope="row"
+              align="center"
+            >
+              Voting Power
             </TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
-          {data.events.items.map((ev, i) => (
-            <TableRow
-              key={`${i}${ev.name}${ev.blockNumber}${ev.transactionHash}`}
-            >
-              <TableCell align="center" component="th" scope="row">
-                {ev.blockNumber}
-              </TableCell>
-              <TableCell align="center" component="th" scope="row">
-                {ev.name}
-              </TableCell>
-              <TableCell align="center" component="th" scope="row">
-                <a
-                  href={`https://etherscan.io/tx/${ev.transactionHash}`}
-                  target="_blank"
-                  css={(theme) =>
-                    css`
-                      color: ${theme.palette.primary.main};
-                    `
-                  }
-                >
-                  {ev.transactionHash.substring(0, 12)}...{" "}
-                </a>
-              </TableCell>
-              <TableCell align="center" component="th" scope="row">
-                {ev.processed ? <>Processed</> : <>Not Processed</>}
-              </TableCell>
+          {loading ? (
+            <TableRow>
+              <TableCell colSpan={3}>Loading User Data</TableCell>
             </TableRow>
-          ))}
+          ) : (
+            data.users.map((user, i) => (
+              <TableRow key={`${i}${user.id}`}>
+                <TableCell align="center" component="th" scope="row">
+                  <a
+                    href={`https://etherscan.io/address/${user.id}`}
+                    target="_blank"
+                    css={(theme) =>
+                      css`
+                        color: ${theme.palette.primary.main};
+                      `
+                    }
+                  >
+                    {user.id.substring(0, 5)}...
+                    {user.id.substring(user.id.length - 5, user.id.length)}
+                  </a>
+                </TableCell>
+                <TableCell align="center" component="th" scope="row">
+                  {user.balance}
+                </TableCell>
+                <TableCell align="center" component="th" scope="row">
+                  {user.votingPower}
+                </TableCell>
+                <TableCell
+                  align="center"
+                  component="th"
+                  scope="row"
+                ></TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
         <TableFooter>
           <TableRow>
             <TablePagination
               rowsPerPageOptions={[5, 10, 25, { label: "All", value: -1 }]}
               colSpan={3}
-              count={data.events.count}
+              count={5000}
               rowsPerPage={limit}
               page={parseInt(offset / limit)}
               SelectProps={{

@@ -10,8 +10,10 @@ import { createUploadLink } from "apollo-upload-client";
 import { onError } from "apollo-link-error";
 //import { ApolloLink } from "apollo-link";
 
-const GRAPHQL_SERVER =
-  process.env.REACT_APP_HTTP_GRAPHQL_URL || "http://localhost:4000";
+const graphqlServer =
+  process.env.NEXT_PUBLIC_GRAPHQL_URL || "http://localhost:4000";
+
+  console.log(process.env.NEXT_PUBLIC_GRAPHQL_URL)
 
 const errorLink = onError(({ graphQLErrors, networkError }) => {
   if (graphQLErrors) {
@@ -23,11 +25,11 @@ const errorLink = onError(({ graphQLErrors, networkError }) => {
 });
 
 const httpLink = createUploadLink({
-  uri: GRAPHQL_SERVER,
+  uri: graphqlServer,
 });
 
 const thegraphLink = new HttpLink({
-  uri: "https://api.thegraph.com/subgraphs/name/ajand/reflexer_flx",
+  uri: process.env.NEXT_PUBLIC_SUBGRAPH_URL,
   // other link options...
 });
 

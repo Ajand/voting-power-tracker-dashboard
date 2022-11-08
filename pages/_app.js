@@ -1,6 +1,7 @@
 import "../styles/globals.css";
 import { createTheme, ThemeProvider, CssBaseline } from "@mui/material";
 import { ApolloProvider } from "@apollo/client";
+import Head from "next/head";
 
 import client from "../client";
 
@@ -48,12 +49,17 @@ const darkTheme = createTheme({
 
 function MyApp({ Component, pageProps }) {
   return (
-    <ApolloProvider client={client}>
-      <ThemeProvider theme={darkTheme}>
-        <CssBaseline />
-        <Component {...pageProps} />
-      </ThemeProvider>
-    </ApolloProvider>
+    <>
+      <Head>
+        <title>Voting Power Tracker Dashboard</title>
+      </Head>
+      <ApolloProvider client={client}>
+        <ThemeProvider theme={darkTheme}>
+          <CssBaseline />
+          <Component {...pageProps} />
+        </ThemeProvider>
+      </ApolloProvider>
+    </>
   );
 }
 

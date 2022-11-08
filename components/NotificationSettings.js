@@ -39,16 +39,25 @@ const RESET_PROCESSING = gql`
   }
 `;
 
+const START_PROCESSING = gql`
+  mutation StartProcessing($notifSettings: String!, $processingCursor: Int) {
+    startProcessing(
+      notifSettings: $notifSettings
+      processingCursor: $processingCursor
+    )
+  }
+`;
+
 const NotificationSettings = () => {
   const [manualCursor, setManualCurosr] = useState(false);
   const [notifSetting, setNotifSetting] = useState(null);
+  const [processingCursor, setPC] = useState("");
 
   const [resetProcessing] = useMutation(RESET_PROCESSING);
+  const [startProcessing] = useMutation(START_PROCESSING);
 
   const { loading, error, data, refetch, startPolling, stopPolling } =
     useQuery(PROCESSOR);
-
-  console.log(data);
 
   useEffect(() => {
     if (data && data.processor.alertSettings) {
@@ -56,10 +65,48 @@ const NotificationSettings = () => {
     }
   }, [data]);
 
+  useEffect(() => {
+    setPC("");
+  }, [manualCursor]);
+
   const changeNotifSetting = (variant, key) => (value) => {
     const nNotifS = { ...notifSetting };
     nNotifS[variant][key] = value;
     setNotifSetting(nNotifS);
+  };
+
+  const formatResult = (notifSettings) => {
+    let nS = {};
+    Object.entries(notifSettings).forEach((item) => {
+      nS[item[0]] = {};
+      Object.entries(item[1]).forEach((inside) => {
+        nS[item[0]][inside[0]] = isNaN(inside[1])
+          ? inside[1]
+          : Number(inside[1]);
+      });
+    });
+    return nS;
+  };
+
+  const isVal = (notifSettings) => {
+    let isValid = true;
+    Object.entries(notifSettings).forEach((item) => {
+      Object.entries(item[1]).forEach((inside) => {
+        if (inside[1] === "") {
+          isValid = false;
+        }
+        if (
+          item[0] === "amount" ||
+          item[0] === "percent" ||
+          item[0] === "timeframe"
+        ) {
+          if (isNaN(inside[1])) {
+            isValid = false;
+          }
+        }
+      });
+    });
+    return isValid;
   };
 
   const StatusRenderer = (sts) => {
@@ -78,7 +125,27 @@ const NotificationSettings = () => {
       case 0:
         return (
           <>
-            <Button size="small" variant="contained" color="primary">
+            <Button
+              onClick={() => {
+                console.log(formatResult(notifSetting));
+                startProcessing({
+                  variables: {
+                    notifSettings: JSON.stringify(formatResult(notifSetting)),
+                    processingCursor: Number(processingCursor),
+                  },
+                })
+                  .then(() => {
+                    refetch();
+                  })
+                  .catch((err) => {
+                    console.log(err);
+                  });
+              }}
+              disabled={!isVal(notifSetting)}
+              size="small"
+              variant="contained"
+              color="primary"
+            >
               Start
             </Button>
           </>
@@ -142,7 +209,11 @@ const NotificationSettings = () => {
       );
 
     return (
-      <div>
+      <div
+        css={css`
+          margin-bottom: 0.5em;
+        `}
+      >
         <div
           css={css`
             display: flex;
@@ -161,7 +232,7 @@ const NotificationSettings = () => {
           <FormControlLabel
             onChange={() => setManualCurosr(!manualCursor)}
             control={<Switch checked={!manualCursor} size="small" />}
-            label={manualCursor ? "Manual" : "Automatic"}
+            label={manualCursor ? "Manual" : "Automatic from current block"}
           />
         </div>
         {manualCursor && (
@@ -170,7 +241,10 @@ const NotificationSettings = () => {
               label="Processing Cursor"
               variant="outlined"
               size="small"
+              type="number"
               fullWidth
+              value={processingCursor}
+              onChange={(e) => setPC(Number(e.target.value))}
               css={css`
                 margin-top: 0.5em;
               `}
@@ -184,6 +258,7 @@ const NotificationSettings = () => {
   if (!data || !notifSetting) return <div></div>;
 
   const currentStatus = data.processor.status;
+
 
   return (
     <Paper
@@ -216,6 +291,33 @@ const NotificationSettings = () => {
         {ActionButtonRenderer(currentStatus)}
       </div>
       {ProcessingCursor(currentStatus)}
+      <Typography
+        css={css`
+          margin-top: 0.5em;
+        `}
+        variant="body1"
+      >
+        Processed Events: {data.processor.processed}
+      </Typography>
+      <Typography
+        css={css`
+          margin-top: 0.5em;
+        `}
+        variant="body1"
+      >
+        Fetched Events: {data.processor.fetched}
+      </Typography>
+      <Typography
+        css={css`
+          margin-top: 0.5em;
+          margin-bottom: 1em;
+        `}
+        variant="body1"
+      >
+        Last Processed Block: {data.processor.lastProcessedBlock}
+      </Typography>
+      <Divider />
+
       {currentStatus == 0 ? (
         <>
           {" "}
@@ -232,7 +334,7 @@ const NotificationSettings = () => {
               }
               label={"Delegation Relative To Total Tokens"}
             />
-            {notifSetting.delegateRelative.active && (
+            {!!notifSetting.delegateRelative.active && (
               <div
                 css={css`
                   margin-top: 0.5em;
@@ -243,7 +345,14 @@ const NotificationSettings = () => {
                   label="Percentage (%)"
                   size="small"
                   fullWidth
+                  type="number"
                   value={notifSetting.delegateRelative.percent}
+                  onChange={(e) =>
+                    changeNotifSetting(
+                      "delegateRelative",
+                      "percent"
+                    )(e.target.value)
+                  }
                   css={css`
                     margin-bottom: 0.75em;
                   `}
@@ -254,8 +363,14 @@ const NotificationSettings = () => {
                   size="small"
                   fullWidth
                   value={notifSetting.delegateRelative.message}
+                  onChange={(e) =>
+                    changeNotifSetting(
+                      "delegateRelative",
+                      "message"
+                    )(e.target.value)
+                  }
                   multiline
-                  helperText="use $delegatee$, $percent$ and $time$ placeholders"
+                  helperText="use $at$, $delegatee$, $percent$ and $time$ placeholders"
                   css={css`
                     margin-bottom: 0.75em;
                   `}
@@ -264,6 +379,12 @@ const NotificationSettings = () => {
                   variant="outlined"
                   label="Timeframe (hour)"
                   size="small"
+                  onChange={(e) =>
+                    changeNotifSetting(
+                      "delegateRelative",
+                      "timeframe"
+                    )(e.target.value)
+                  }
                   fullWidth
                   value={notifSetting.delegateRelative.timeframe}
                   css={css`
@@ -286,7 +407,7 @@ const NotificationSettings = () => {
               }
               label={"Delegation Absolute Change"}
             />
-            {notifSetting.delegateAmount.active && (
+            {!!notifSetting.delegateAmount.active && (
               <div
                 css={css`
                   margin-top: 0.5em;
@@ -298,6 +419,12 @@ const NotificationSettings = () => {
                   size="small"
                   fullWidth
                   value={notifSetting.delegateAmount.amount}
+                  onChange={(e) =>
+                    changeNotifSetting(
+                      "delegateAmount",
+                      "amount"
+                    )(e.target.value)
+                  }
                   css={css`
                     margin-bottom: 0.75em;
                   `}
@@ -308,8 +435,14 @@ const NotificationSettings = () => {
                   size="small"
                   fullWidth
                   value={notifSetting.delegateAmount.message}
+                  onChange={(e) =>
+                    changeNotifSetting(
+                      "delegateAmount",
+                      "message"
+                    )(e.target.value)
+                  }
                   multiline
-                  helperText="use $delegatee$, $amount$ and $time$ placeholders"
+                  helperText="use $at$, $delegatee$, $amount$ and $time$ placeholders"
                   css={css`
                     margin-bottom: 0.75em;
                   `}
@@ -320,6 +453,12 @@ const NotificationSettings = () => {
                   size="small"
                   fullWidth
                   value={notifSetting.delegateAmount.timeframe}
+                  onChange={(e) =>
+                    changeNotifSetting(
+                      "delegateAmount",
+                      "timeframe"
+                    )(e.target.value)
+                  }
                   css={css`
                     margin-bottom: 0.75em;
                   `}
@@ -340,7 +479,7 @@ const NotificationSettings = () => {
               }
               label={"Transfer Relative To Total Tokens"}
             />
-            {notifSetting.transferRelative.active && (
+            {!!notifSetting.transferRelative.active && (
               <div
                 css={css`
                   margin-top: 0.5em;
@@ -352,6 +491,12 @@ const NotificationSettings = () => {
                   size="small"
                   fullWidth
                   value={notifSetting.transferRelative.percent}
+                  onChange={(e) =>
+                    changeNotifSetting(
+                      "transferRelative",
+                      "percent"
+                    )(e.target.value)
+                  }
                   css={css`
                     margin-bottom: 0.75em;
                   `}
@@ -362,8 +507,14 @@ const NotificationSettings = () => {
                   size="small"
                   fullWidth
                   value={notifSetting.transferRelative.message}
+                  onChange={(e) =>
+                    changeNotifSetting(
+                      "transferRelative",
+                      "message"
+                    )(e.target.value)
+                  }
                   multiline
-                  helperText="use $percent$, $to$ and $time$ placeholders"
+                  helperText="use $at$, $percent$, $to$ and $time$ placeholders"
                   css={css`
                     margin-bottom: 0.75em;
                   `}
@@ -374,6 +525,12 @@ const NotificationSettings = () => {
                   size="small"
                   fullWidth
                   value={notifSetting.transferRelative.timeframe}
+                  onChange={(e) =>
+                    changeNotifSetting(
+                      "transferRelative",
+                      "timeframe"
+                    )(e.target.value)
+                  }
                   css={css`
                     margin-bottom: 0.75em;
                   `}
@@ -394,7 +551,7 @@ const NotificationSettings = () => {
               }
               label={"Transfer Absolute Change"}
             />
-            {notifSetting.transferAmount.active && (
+            {!!notifSetting.transferAmount.active && (
               <div
                 css={css`
                   margin-top: 0.5em;
@@ -406,6 +563,12 @@ const NotificationSettings = () => {
                   size="small"
                   fullWidth
                   value={notifSetting.transferAmount.amount}
+                  onChange={(e) =>
+                    changeNotifSetting(
+                      "transferAmount",
+                      "amount"
+                    )(e.target.value)
+                  }
                   css={css`
                     margin-bottom: 0.75em;
                   `}
@@ -416,8 +579,14 @@ const NotificationSettings = () => {
                   size="small"
                   fullWidth
                   value={notifSetting.transferAmount.message}
+                  onChange={(e) =>
+                    changeNotifSetting(
+                      "transferAmount",
+                      "message"
+                    )(e.target.value)
+                  }
                   multiline
-                  helperText="use $amount$, $to$ and $time$ placeholders"
+                  helperText="use $at$, $amount$, $to$ and $time$ placeholders"
                   css={css`
                     margin-bottom: 0.75em;
                   `}
@@ -428,6 +597,12 @@ const NotificationSettings = () => {
                   size="small"
                   fullWidth
                   value={notifSetting.transferAmount.timeframe}
+                  onChange={(e) =>
+                    changeNotifSetting(
+                      "transferAmount",
+                      "timeframe"
+                    )(e.target.value)
+                  }
                   css={css`
                     margin-bottom: 0.75em;
                   `}
@@ -464,7 +639,7 @@ const NotificationSettings = () => {
                 }
               />
             </div>
-            {notifSetting.delegateRelative.active && (
+            {!!notifSetting.delegateRelative.active && (
               <>
                 <Typography
                   variant="body1"
@@ -518,7 +693,7 @@ const NotificationSettings = () => {
                 }
               />
             </div>
-            {notifSetting.delegateAmount.active && (
+            {!!notifSetting.delegateAmount.active && (
               <>
                 <Typography
                   variant="body1"
@@ -574,7 +749,7 @@ const NotificationSettings = () => {
                 }
               />
             </div>
-            {notifSetting.transferRelative.active && (
+            {!!notifSetting.transferRelative.active && (
               <>
                 <Typography
                   variant="body1"
@@ -628,7 +803,7 @@ const NotificationSettings = () => {
                 }
               />
             </div>
-            {notifSetting.transferAmount.active && (
+            {!!notifSetting.transferAmount.active && (
               <>
                 <Typography
                   variant="body1"
