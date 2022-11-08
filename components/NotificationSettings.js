@@ -60,6 +60,11 @@ const NotificationSettings = () => {
     useQuery(PROCESSOR);
 
   useEffect(() => {
+    startPolling(1000);
+    return () => stopPolling();
+  }, []);
+
+  useEffect(() => {
     if (data && data.processor.alertSettings) {
       setNotifSetting(JSON.parse(data.processor.alertSettings));
     }
@@ -150,7 +155,7 @@ const NotificationSettings = () => {
             </Button>
           </>
         );
-      case 1:
+      default:
         return (
           <>
             <Button
@@ -170,24 +175,6 @@ const NotificationSettings = () => {
               Stop
             </Button>
           </>
-        );
-      case 2:
-        return (
-          <div>
-            <Button
-              css={css`
-                margin-right: 0.5em;
-              `}
-              size="small"
-              variant="contained"
-              color="secondary"
-            >
-              Start
-            </Button>
-            <Button size="small" variant="text" color="error">
-              Reset
-            </Button>
-          </div>
         );
     }
   };
@@ -259,7 +246,6 @@ const NotificationSettings = () => {
 
   const currentStatus = data.processor.status;
 
-
   return (
     <Paper
       css={css`
@@ -290,34 +276,37 @@ const NotificationSettings = () => {
         </Typography>
         {ActionButtonRenderer(currentStatus)}
       </div>
-      {ProcessingCursor(currentStatus)}
-      <Typography
-        css={css`
-          margin-top: 0.5em;
-        `}
-        variant="body1"
-      >
-        Processed Events: {data.processor.processed}
-      </Typography>
-      <Typography
-        css={css`
-          margin-top: 0.5em;
-        `}
-        variant="body1"
-      >
-        Fetched Events: {data.processor.fetched}
-      </Typography>
-      <Typography
-        css={css`
-          margin-top: 0.5em;
-          margin-bottom: 1em;
-        `}
-        variant="body1"
-      >
-        Last Processed Block: {data.processor.lastProcessedBlock}
-      </Typography>
-      <Divider />
-
+      {ProcessingCursor(currentStatus)}{" "}
+      {currentStatus !== 0 && (
+        <>
+          <Typography
+            css={css`
+              margin-top: 0.5em;
+            `}
+            variant="body1"
+          >
+            Processed Events: {data.processor.processed}
+          </Typography>
+          <Typography
+            css={css`
+              margin-top: 0.5em;
+            `}
+            variant="body1"
+          >
+            Fetched Events: {data.processor.fetched}
+          </Typography>
+          <Typography
+            css={css`
+              margin-top: 0.5em;
+              margin-bottom: 1em;
+            `}
+            variant="body1"
+          >
+            Last Processed Block: {data.processor.lastProcessedBlock}
+          </Typography>
+          <Divider />
+        </>
+      )}
       {currentStatus == 0 ? (
         <>
           {" "}

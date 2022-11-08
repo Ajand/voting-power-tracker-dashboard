@@ -169,6 +169,7 @@ export default function CustomPaginationActionsTable() {
                 <a
                   href={`https://etherscan.io/tx/${ev.transactionHash}`}
                   target="_blank"
+                  rel="noreferrer"
                   css={(theme) =>
                     css`
                       color: ${theme.palette.primary.main};
