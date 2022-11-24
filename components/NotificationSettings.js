@@ -359,7 +359,8 @@ const NotificationSettings = () => {
                     )(e.target.value)
                   }
                   multiline
-                  helperText="use $at$, $delegatee$, $percent$ and $time$ placeholders"
+                  helperText="use $at$, $delegatee$, $percent$, $amount$,$time$, 
+                  $from$, $resolvedFrom$, $to$, $resolvedTo$, $prevBalance$, $finalBalance$, $prevVp$ and $finalVp$, placeholders"
                   css={css`
                     margin-bottom: 0.75em;
                   `}
@@ -431,7 +432,7 @@ const NotificationSettings = () => {
                     )(e.target.value)
                   }
                   multiline
-                  helperText="use $at$, $delegatee$, $amount$ and $time$ placeholders"
+                  helperText="use $at$, $delegatee$, $percent$, $amount$, $time$, $from$, $resolvedFrom$, $to$, $resolvedTo$, $prevBalance$, $finalBalance$, $prevVp$ and $finalVp$ placeholders"
                   css={css`
                     margin-bottom: 0.75em;
                   `}
@@ -503,7 +504,7 @@ const NotificationSettings = () => {
                     )(e.target.value)
                   }
                   multiline
-                  helperText="use $at$, $percent$, $to$ and $time$ placeholders"
+                  helperText="use $at$, $percent$, $time$, $amount, $time$, $from$, $resolvedFrom$, $to$, $resolvedTo$, $prevBalance$, $finalBalance$, $prevVp$ and $finalVp$  placeholders"
                   css={css`
                     margin-bottom: 0.75em;
                   `}
@@ -575,7 +576,7 @@ const NotificationSettings = () => {
                     )(e.target.value)
                   }
                   multiline
-                  helperText="use $at$, $amount$, $to$ and $time$ placeholders"
+                  helperText="use $at$, $amount$, $to$, $time$, $percent$, $from$, $resolvedFrom$, $to$, $resolvedTo$, $prevBalance$, $finalBalance$, $prevVp$ and $finalVp$ placeholders"
                   css={css`
                     margin-bottom: 0.75em;
                   `}
