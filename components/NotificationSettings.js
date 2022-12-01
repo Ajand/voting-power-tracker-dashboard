@@ -359,7 +359,7 @@ const NotificationSettings = () => {
                     )(e.target.value)
                   }
                   multiline
-                  helperText="use $at$, $delegatee$, $percent$, $amount$,$time$, 
+                  helperText="use $changeAmount$, $percent$, $at$, $delegatee$, $percent$, $amount$,$time$, 
                   $from$, $resolvedFrom$, $to$, $resolvedTo$, $prevBalance$, $finalBalance$, $prevVp$ and $finalVp$, placeholders"
                   css={css`
                     margin-bottom: 0.75em;
@@ -432,7 +432,7 @@ const NotificationSettings = () => {
                     )(e.target.value)
                   }
                   multiline
-                  helperText="use $at$, $delegatee$, $percent$, $amount$, $time$, $from$, $resolvedFrom$, $to$, $resolvedTo$, $prevBalance$, $finalBalance$, $prevVp$ and $finalVp$ placeholders"
+                  helperText="use  $changeAmount$, $percent$, $at$, $delegatee$, $percent$, $amount$, $time$, $from$, $resolvedFrom$, $to$, $resolvedTo$, $prevBalance$, $finalBalance$, $prevVp$ and $finalVp$ placeholders"
                   css={css`
                     margin-bottom: 0.75em;
                   `}
@@ -504,7 +504,7 @@ const NotificationSettings = () => {
                     )(e.target.value)
                   }
                   multiline
-                  helperText="use $at$, $percent$, $time$, $amount, $time$, $from$, $resolvedFrom$, $to$, $resolvedTo$, $prevBalance$, $finalBalance$, $prevVp$ and $finalVp$  placeholders"
+                  helperText="use  $changeAmount$, $percent$, $at$, $percent$, $time$, $amount, $time$, $from$, $resolvedFrom$, $to$, $resolvedTo$, $prevBalance$, $finalBalance$, $prevVp$ and $finalVp$  placeholders"
                   css={css`
                     margin-bottom: 0.75em;
                   `}
@@ -576,7 +576,7 @@ const NotificationSettings = () => {
                     )(e.target.value)
                   }
                   multiline
-                  helperText="use $at$, $amount$, $to$, $time$, $percent$, $from$, $resolvedFrom$, $to$, $resolvedTo$, $prevBalance$, $finalBalance$, $prevVp$ and $finalVp$ placeholders"
+                  helperText="use  $changeAmount$, $percent$, $at$, $amount$, $to$, $time$, $percent$, $from$, $resolvedFrom$, $to$, $resolvedTo$, $prevBalance$, $finalBalance$, $prevVp$ and $finalVp$ placeholders"
                   css={css`
                     margin-bottom: 0.75em;
                   `}
